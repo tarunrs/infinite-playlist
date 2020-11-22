@@ -1,0 +1,14 @@
+{
+    "type": "postgres",
+    "host": "localhost",
+    "port": 5432,
+    "username": "ip",
+    "password": "",
+    "database": "infinite_playlist",
+    "entities": ["src/**/*.entity{.ts,.js}"],
+    "migrationsTableName": "migration_table",
+    "migrations": ["migration/*.ts"],
+    "cli": {
+        "migrationsDir": "migration"
+    }
+}
