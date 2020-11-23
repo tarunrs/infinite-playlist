@@ -6,21 +6,21 @@ import { EntityManager, Transaction, TransactionManager } from 'typeorm';
 
 @Injectable()
 export class SpotifyStrategy extends PassportStrategy(Strategy, 'spotify') {
-  constructor(
-      private readonly usersService: UsersService,
-    ) {
+  constructor(private readonly usersService: UsersService) {
     super({
-        clientID: 'db82d92819144ea9b362b93318bc0caf',
-        clientSecret: '0a5ebcffa870477a902bd2ac7e56a79f',
-        callbackURL: 'http://192.168.0.141:8888/auth/spotify/callback',
-        scope: ['user-read-email', 
-                'user-read-private',
-                'streaming',
-                'user-library-read',
-                'user-library-modify',
-                'user-read-playback-state',
-                'user-modify-playback-state'],
-        showDialog: true
+      clientID: 'db82d92819144ea9b362b93318bc0caf',
+      clientSecret: '0a5ebcffa870477a902bd2ac7e56a79f',
+      callbackURL: 'http://localhost:8888/auth/spotify/callback',
+      scope: [
+        'user-read-email',
+        'user-read-private',
+        'streaming',
+        'user-library-read',
+        'user-library-modify',
+        'user-read-playback-state',
+        'user-modify-playback-state',
+      ],
+      showDialog: true,
     });
   }
 
@@ -35,8 +35,17 @@ export class SpotifyStrategy extends PassportStrategy(Strategy, 'spotify') {
     console.log(accessToken);
     console.log(refreshToken);
     console.log(profile);
-    const email = profile.emails && profile.emails.length ? profile.emails[0].value : '';
-    const user = await this.usersService.findOrCreate(profile.id, email, profile.displayName, profile.photos[0], accessToken, refreshToken, manager);
+    const email =
+      profile.emails && profile.emails.length ? profile.emails[0].value : '';
+    const user = await this.usersService.findOrCreate(
+      profile.id,
+      email,
+      profile.displayName,
+      profile.photos[0],
+      accessToken,
+      refreshToken,
+      manager,
+    );
     const payload = {
       user,
       accessToken,
