@@ -30,7 +30,6 @@ export class UsersService {
       dto.photoUrl = photoUrl;
       dto.accessToken = accessToken;
       dto.refreshToken = refreshToken;
-      console.log(dto);
       return this.create(dto, entityManager);
     } else {
       return user;
@@ -41,8 +40,9 @@ export class UsersService {
     return `This action returns all users`;
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} user`;
+  async findOne(id: number) {
+    const user = await this.usersRepository.findOne(id);
+    return user;
   }
 
   update(id: number, updateUserDto: UpdateUserDto) {

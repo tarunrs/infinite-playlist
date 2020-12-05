@@ -1,7 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION } from 'constants';
 import SpotifyWebApi from 'spotify-web-api-node';
-import { Repository } from 'typeorm';
+import { rootCertificates } from 'tls';
+import { AdvancedConsoleLogger, Repository } from 'typeorm';
 import { CreateSongDto } from './dto/create-song.dto';
 import { UpdateSongDto } from './dto/update-song.dto';
 import { Song } from './entities/song.entity';
@@ -13,6 +15,7 @@ export class SongsService {
     @InjectRepository(Song)
     private songsRepository: Repository<Song>,
   ) {
+    this.songsRepository = songsRepository;
     this.spotifyClient = new SpotifyWebApi({
       clientId: 'db82d92819144ea9b362b93318bc0caf',
       clientSecret: '0a5ebcffa870477a902bd2ac7e56a79f',
@@ -22,7 +25,7 @@ export class SongsService {
 
   async create(createSongDto: CreateSongDto) {
     this.spotifyClient.setAccessToken(
-      'BQASDCDAHfvAELCB9aJF5uPunVGBhrfegLu1bf87TZbkwLa3gUorgxNmWM8rMo8mKHTEWI7jd8s--7IXucTJAI_BuSJkm3MDT8MUfAC6Xgr54pSKbe078tibgBqJ4Rsq9Yh-ywuNr6o0-TUBT0ObIXTsy1u4LdvgKqHc8mD4o8wlQ12oPGFr',
+      'BQC2uJ-PNDBeyd1XIpSiFEb40xyN7go-V7A9PLWLbCBog9-k8Owj8NSkMNnRK6IgkSkpQMAnSG-OzUqFngwACvQLGmPrgt-SsHemY-0sqP9orEfHTZn21kH2SGVZLSpriPcpa0xSUAPbZlAZsXqxV0OK4F1GZvrJTFxsmi8kz4EGzqkFCJYF',
     );
     console.log(createSongDto);
     const songDetails = await this.spotifyClient.getTrack(
@@ -59,7 +62,7 @@ export class SongsService {
     const parent = await this.songsRepository.findOneOrFail({
       id: createSongDto.id,
     });
-    const songRecord = await this.songsRepository.insert({
+    const songRecord = {
       artistName: artistName,
       albumName: albumName,
       artistId: artistId,
@@ -80,60 +83,193 @@ export class SongsService {
       tempo: tempo,
       timeSignature: timeSignature,
       parent: parent,
-    });
-    console.log(songRecord);
-    console.log(songDetails);
-    return songRecord;
+      score: 0,
+    };
+    const retValue = this.getScore(songRecord, parent);
+    songRecord.score = retValue.score;
+    const tempRecord = await this.songsRepository.insert(songRecord);
+    return {
+      score: retValue.score,
+      matches: retValue.matches,
+      id: tempRecord.raw[0].id,
+    };
   }
 
   calculateScore(currSongValue: number, parentSongValue: number) {
-    console.log(currSongValue);
-    console.log(parentSongValue);
-    console.log(typeof currSongValue);
-    const diff = Math.abs(parseFloat(currSongValue.toString()) - parseFloat(parentSongValue.toString())); 
+    const diff = Math.abs(
+      parseFloat(currSongValue.toString()) -
+        parseFloat(parentSongValue.toString()),
+    );
     if (diff <= 0.1) {
-      console.log('Score!!');
-      return 100;
+      return true;
     } else {
-      return 0;
+      return false;
     }
   }
 
-  getScore(currSong: Song, parentSong: Song) {
+  getScore(currSong: any, parentSong: Song) {
     let score = 0;
-    score += this.calculateScore(
-      currSong.danceability,
-      parentSong.danceability,
-    );
-    score += this.calculateScore(currSong.energy, parentSong.energy);
-    score += this.calculateScore(currSong.loudness, parentSong.loudness);
-    score += this.calculateScore(currSong.speechiness, parentSong.speechiness);
-    score += this.calculateScore(
-      currSong.acousticness,
-      parentSong.acousticness,
-    );
-    score += this.calculateScore(
-      currSong.instrumentalness,
-      parentSong.instrumentalness,
-    );
-    score += this.calculateScore(currSong.liveness, parentSong.liveness);
-    score += this.calculateScore(currSong.tempo, parentSong.tempo);
+    const matches = [];
+    if (this.calculateScore(currSong.danceability, parentSong.danceability)) {
+      score += 100;
+      matches.push('danceability');
+    }
+    if (this.calculateScore(currSong.energy, parentSong.energy)) {
+      score += 100;
+      matches.push('energy');
+    }
+    if (this.calculateScore(currSong.loudness, parentSong.loudness)) {
+      score += 100;
+      matches.push('loudness');
+    }
+    if (this.calculateScore(currSong.speechiness, parentSong.speechiness)) {
+      score += 100;
+      matches.push('speechiness');
+    }
+    if (this.calculateScore(currSong.acousticness, parentSong.acousticness)) {
+      score += 100;
+      matches.push('acousticness');
+    }
+    if (
+      this.calculateScore(
+        currSong.instrumentalness,
+        parentSong.instrumentalness,
+      )
+    ) {
+      score += 100;
+      matches.push('instrumentalness');
+    }
+    if (this.calculateScore(currSong.liveness, parentSong.liveness)) {
+      score += 100;
+      matches.push('liveness');
+    }
+    if (this.calculateScore(currSong.tempo, parentSong.tempo)) {
+      score += 100;
+      matches.push('tempo');
+    }
     if (currSong.key === parentSong.key) {
       score += 100;
+      matches.push('key');
     }
     if (currSong.timeSignature === parentSong.timeSignature) {
       score += 100;
+      matches.push('timeSignature');
     }
-    return score;
+    return { score: score, matches: matches, id: null };
   }
+
+  createTree(songs) {
+    if (songs.length === 0) {
+      return;
+    }
+    const root = {
+      song: songs[0],
+      id: songs[0].id,
+      parent: null,
+      children: [],
+      scores: [],
+      maxScore: 0,
+      maxChildIndex: null,
+    };
+    const nodeMapping = {};
+    nodeMapping[root.id] = root;
+    for (const song of songs) {
+      if (!song.parentId) {
+        continue;
+      }
+      const node = {
+        song: song,
+        id: song.id,
+        parent: song.parentId,
+        children: [],
+        scores: [],
+        maxScore: song.score,
+        maxChildIndex: null,
+      };
+      nodeMapping[song.parentId].children.push(node);
+      nodeMapping[node.id] = node;
+    }
+    return [root, nodeMapping];
+  }
+
+  calculateScores(root) {
+    if (!root) {
+      return 0;
+    }
+    let maxScore = root.maxScore;
+    let index = 0;
+    for (const node of root.children) {
+      const score = node.song.score + this.calculateScores(node);
+      root.scores.push(score);
+      if (maxScore <= score) {
+        maxScore = score;
+        root.maxChildIndex = index;
+      }
+      index += 1;
+    }
+    root.maxScore = maxScore;
+    return maxScore;
+  }
+
+  getMaxScoringPlaylist(root) {
+    const songs = [];
+    let node = root;
+    while (node) {
+      node.song.children = node.children.map((child) => child.song);
+      songs.push(node.song);
+      if (node.maxChildIndex === null) {
+        break;
+      }
+      node = node.children[node.maxChildIndex];
+    }
+    return songs;
+  }
+
+  getMaxScoringPlaylistById(nodeMapping, id: number) {
+    let songs = [];
+    let node = nodeMapping[nodeMapping[id].parent];
+    while (node) {
+      node.song.children = node.children.map((child) => child.song);
+      songs.push(node.song);
+      node = nodeMapping[node.parent];
+    }
+    songs = songs.reverse();
+    node = nodeMapping[id];
+    while (node) {
+      node.song.children = node.children.map((child) => child.song);
+      songs.push(node.song);
+      if (node.maxChildIndex === null) {
+        break;
+      }
+      node = node.children[node.maxChildIndex];
+    }
+    return songs;
+  }
+
   async findAll() {
     const songs = await this.songsRepository.find();
-    return songs;
+    const [tree, nodeMapping] = this.createTree(songs);
+    this.calculateScores(tree);
+    return this.getMaxScoringPlaylist(tree);
+  }
+
+  async findById(id: number) {
+    console.log(id);
+    const songs = await this.songsRepository.find();
+    const [tree, nodeMapping] = this.createTree(songs);
+    this.calculateScores(tree);
+    return this.getMaxScoringPlaylistById(nodeMapping, id);
   }
 
   async findOne(id: number) {
     const song = await this.songsRepository.findOne({ id: id });
     return song;
+  }
+
+  async findChildren(id: number) {
+    const parent = await this.songsRepository.findOne({ id: id });
+    const songs = await this.songsRepository.find({ parent: parent });
+    return songs;
   }
 
   update(id: number, updateSongDto: UpdateSongDto) {

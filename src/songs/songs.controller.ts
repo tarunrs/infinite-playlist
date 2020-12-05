@@ -27,13 +27,9 @@ export class SongsController {
 
   @Post()
   async create(@Body() createSongDto: CreateSongDto) {
-    const temp = await this.songsService.create(createSongDto);
-    const currSong = await this.songsService.findOne(temp.identifiers[0].id);
-    const parentSong = await this.songsService.findOne(createSongDto.id);
-    console.log(parentSong);
-    console.log(currSong);
-    const score = this.songsService.getScore(currSong, parentSong);
-    return { score: score };
+    const retValue = await this.songsService.create(createSongDto);
+    console.log(retValue);
+    return retValue;
   }
 
   @Get()
@@ -42,8 +38,8 @@ export class SongsController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.songsService.findOne(+id);
+  findById(@Param('id') id: string) {
+    return this.songsService.findById(parseInt(id));
   }
 
   @Put(':id')
@@ -59,7 +55,7 @@ export class SongsController {
   @Get('/search/artist')
   async findTrack(@Req() req: any) {
     this.spotifyClient.setAccessToken(
-      'BQASDCDAHfvAELCB9aJF5uPunVGBhrfegLu1bf87TZbkwLa3gUorgxNmWM8rMo8mKHTEWI7jd8s--7IXucTJAI_BuSJkm3MDT8MUfAC6Xgr54pSKbe078tibgBqJ4Rsq9Yh-ywuNr6o0-TUBT0ObIXTsy1u4LdvgKqHc8mD4o8wlQ12oPGFr',
+      'BQC2uJ-PNDBeyd1XIpSiFEb40xyN7go-V7A9PLWLbCBog9-k8Owj8NSkMNnRK6IgkSkpQMAnSG-OzUqFngwACvQLGmPrgt-SsHemY-0sqP9orEfHTZn21kH2SGVZLSpriPcpa0xSUAPbZlAZsXqxV0OK4F1GZvrJTFxsmi8kz4EGzqkFCJYF',
     );
     const response = await this.spotifyClient.searchTracks(req.query.artist);
     const tracks = response.body.tracks.items.map((item) => {
@@ -74,19 +70,5 @@ export class SongsController {
       };
     });
     return tracks;
-  }
-
-  @Get('/search/track')
-  async findTrackAndArtist(@Req() req: any) {
-    this.spotifyClient.setAccessToken(
-      'BQCp7wAu8S9xxdn3nVl0RTYrRDP5HxuYotLcu_h9Tq4tFH9bZMTky7OO1pcIcoOXlux6WkdKv2tleavU9fnFoA-1jmPAX4PVsWHiff5yoHb4aYxrWXfLa8GKZzTL8kr-hQiq17D6Oozp2Jt466g872hkBVDbDHwdArqm0m6Mf3iDiCsYDDX-',
-    );
-    const response = await this.spotifyClient.searchTracks(
-      'track:' + req.query.track + ' artist:' + req.query.artist,
-    );
-    const songs = response.body.tracks.items.map((item) => {
-      return { name: item.name, id: item.id };
-    });
-    return songs;
   }
 }

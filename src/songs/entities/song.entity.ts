@@ -9,6 +9,7 @@ import {
   JoinColumn,
   ManyToOne,
 } from 'typeorm';
+import { User } from './../../users/entities/user.entity';
 
 @Entity()
 export class Song extends BaseEntity {
@@ -16,8 +17,15 @@ export class Song extends BaseEntity {
   id: number;
 
   @ManyToOne((type) => Song)
-  @JoinColumn({ name: 'parent' })
+  @JoinColumn()
   parent: Song;
+
+  @Column({ nullable: true })
+  parentId: number;
+
+  @ManyToOne((type) => User)
+  @JoinColumn({ name: 'user' })
+  user: Song;
 
   @Column({ nullable: false })
   artistName: string;
@@ -75,6 +83,9 @@ export class Song extends BaseEntity {
 
   @Column({ type: 'decimal', default: 0 })
   timeSignature: number;
+
+  @Column({ type: 'integer', default: 0 })
+  score: number;
 
   @CreateDateColumn({
     type: 'timestamp',
