@@ -32,7 +32,10 @@ export class UsersService {
       dto.refreshToken = refreshToken;
       return this.create(dto, entityManager);
     } else {
-      return user;
+      const dto = CreateUserDto.fromEntity(user);
+      dto.accessToken = accessToken;
+      dto.refreshToken = refreshToken;
+      return this.create(dto, entityManager);
     }
   }
 

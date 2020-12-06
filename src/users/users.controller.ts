@@ -12,7 +12,8 @@ export class UsersController {
   @Post()
   @Transaction()
   create(@Body() createUserDto: CreateUserDto,
-          @TransactionManager() manager: EntityManager,) {
+    @TransactionManager() manager: EntityManager,
+  ) {
     return this.usersService.create(createUserDto, manager);
   }
 
@@ -21,6 +22,10 @@ export class UsersController {
     return this.usersService.findAll();
   }
 
+  @Get('/auth')
+  login() {
+    return;
+  }
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.usersService.findOne(+id);

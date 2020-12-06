@@ -10,7 +10,7 @@ export class SpotifyStrategy extends PassportStrategy(Strategy, 'spotify') {
     super({
       clientID: 'db82d92819144ea9b362b93318bc0caf',
       clientSecret: '0a5ebcffa870477a902bd2ac7e56a79f',
-      callbackURL: 'http://localhost:8888/auth/spotify/callback',
+      callbackURL: 'http://infiniteplaylist.com/api/auth/spotify/callback',
       scope: [
         'user-read-email',
         'user-read-private',
@@ -32,9 +32,6 @@ export class SpotifyStrategy extends PassportStrategy(Strategy, 'spotify') {
     done: (err: any, user: any, info?: any) => void,
     @TransactionManager() manager: EntityManager,
   ): Promise<any> {
-    console.log(accessToken);
-    console.log(refreshToken);
-    console.log(profile);
     const email =
       profile.emails && profile.emails.length ? profile.emails[0].value : '';
     const user = await this.usersService.findOrCreate(

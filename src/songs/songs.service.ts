@@ -19,15 +19,14 @@ export class SongsService {
     this.spotifyClient = new SpotifyWebApi({
       clientId: 'db82d92819144ea9b362b93318bc0caf',
       clientSecret: '0a5ebcffa870477a902bd2ac7e56a79f',
-      redirectUri: 'http://localhost:8888/auth/spotify/callback',
+      redirectUri: 'http://infiniteplaylist.com/api/auth/spotify/callback',
     });
   }
 
   async create(createSongDto: CreateSongDto) {
     this.spotifyClient.setAccessToken(
-      'BQC2uJ-PNDBeyd1XIpSiFEb40xyN7go-V7A9PLWLbCBog9-k8Owj8NSkMNnRK6IgkSkpQMAnSG-OzUqFngwACvQLGmPrgt-SsHemY-0sqP9orEfHTZn21kH2SGVZLSpriPcpa0xSUAPbZlAZsXqxV0OK4F1GZvrJTFxsmi8kz4EGzqkFCJYF',
+      'BQDKUPCSGDLJPTfS0iO2Mc4ggoLF0VoDic0q6J9OvQP6Qh4L7_5GKmVcEyUTrZHDMUSiqxf5V_sXijgcn3juHzr-FhWnUhnLvEIeqzIApng0dy4rmV3egTvgtihn5_H-tZgEb_gqmRkY14OidzEBhW9FGtjlQawbM2tiaCQhwVeqr-svvkE5',
     );
-    console.log(createSongDto);
     const songDetails = await this.spotifyClient.getTrack(
       createSongDto.trackId,
     );
@@ -254,7 +253,6 @@ export class SongsService {
   }
 
   async findById(id: number) {
-    console.log(id);
     const songs = await this.songsRepository.find();
     const [tree, nodeMapping] = this.createTree(songs);
     this.calculateScores(tree);
