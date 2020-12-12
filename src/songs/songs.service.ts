@@ -2,11 +2,13 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION } from 'constants';
 import SpotifyWebApi from 'spotify-web-api-node';
+import { User } from 'src/users/entities/user.entity';
 import { rootCertificates } from 'tls';
-import { AdvancedConsoleLogger, Repository } from 'typeorm';
+import { AdvancedConsoleLogger, EntityManager, Repository } from 'typeorm';
 import { CreateSongDto } from './dto/create-song.dto';
 import { UpdateSongDto } from './dto/update-song.dto';
 import { Song } from './entities/song.entity';
+import { UsersService } from './../users/users.service';
 
 @Injectable()
 export class SongsService {
@@ -14,6 +16,7 @@ export class SongsService {
   constructor(
     @InjectRepository(Song)
     private songsRepository: Repository<Song>,
+    private usersService: UsersService,
   ) {
     this.songsRepository = songsRepository;
     this.spotifyClient = new SpotifyWebApi({
@@ -23,10 +26,13 @@ export class SongsService {
     });
   }
 
-  async create(createSongDto: CreateSongDto) {
-    this.spotifyClient.setAccessToken(
-      'BQDKUPCSGDLJPTfS0iO2Mc4ggoLF0VoDic0q6J9OvQP6Qh4L7_5GKmVcEyUTrZHDMUSiqxf5V_sXijgcn3juHzr-FhWnUhnLvEIeqzIApng0dy4rmV3egTvgtihn5_H-tZgEb_gqmRkY14OidzEBhW9FGtjlQawbM2tiaCQhwVeqr-svvkE5',
-    );
+  async create(
+    createSongDto: CreateSongDto,
+    user: User,
+    manager: EntityManager,
+  ) {
+    const userRecord = await this.usersService.refreshToken(user.id, manager);
+    this.spotifyClient.setAccessToken(userRecord.accessToken);
     const songDetails = await this.spotifyClient.getTrack(
       createSongDto.trackId,
     );
@@ -91,6 +97,7 @@ export class SongsService {
       score: retValue.score,
       matches: retValue.matches,
       id: tempRecord.raw[0].id,
+      accessToken: userRecord.accessToken,
     };
   }
 

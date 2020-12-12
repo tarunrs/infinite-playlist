@@ -14,18 +14,4 @@ export class AppController {
     console.log('hello');
     return 'here';
   }
-
-  @Get('/spotify')
-  @UseGuards(AuthGuard('spotify'))
-  async spotifyLogin(): Promise<any> {
-    return HttpStatus.OK;
-  }
-
-  @Get('/auth/spotify/callback')
-  @UseGuards(AuthGuard('spotify'))
-  async spotifyLoginRedirect(@Req() req: any, @Res() res): Promise<any> {
-    return res.redirect(
-      'http://infiniteplaylist.com/?access_token=' + req.user.accessToken,
-    );
-  }
 }

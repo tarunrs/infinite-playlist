@@ -8,16 +8,25 @@ import {
   Delete,
   Req,
   Res,
+  Bind,
+  UseGuards,
 } from '@nestjs/common';
 import { SongsService } from './songs.service';
 import { CreateSongDto } from './dto/create-song.dto';
 import { UpdateSongDto } from './dto/update-song.dto';
 import SpotifyWebApi from 'spotify-web-api-node';
+import { JwtAuthGuard } from 'src/jwt-auth.guard';
+import { User } from 'src/users/entities/user.entity';
+import { EntityManager, Transaction, TransactionManager } from 'typeorm';
+import { UsersService } from 'src/users/users.service';
 
 @Controller('songs')
 export class SongsController {
   private spotifyClient: SpotifyWebApi;
-  constructor(private readonly songsService: SongsService) {
+  constructor(
+    private readonly songsService: SongsService,
+    private readonly usersService: UsersService,
+  ) {
     this.spotifyClient = new SpotifyWebApi({
       clientId: 'db82d92819144ea9b362b93318bc0caf',
       clientSecret: '0a5ebcffa870477a902bd2ac7e56a79f',
@@ -26,8 +35,23 @@ export class SongsController {
   }
 
   @Post()
-  async create(@Body() createSongDto: CreateSongDto) {
-    const retValue = await this.songsService.create(createSongDto);
+  @UseGuards(JwtAuthGuard)
+  @Bind(Req())
+  @Transaction()
+  async create(
+    @Req() req: any,
+    @Body() createSongDto: CreateSongDto,
+    @TransactionManager() manager: EntityManager,
+  ) {
+    const user = <User>req.user;
+    console.log("User record in create:");
+    console.log(user);
+    //const userRecord = await this.usersService.refreshToken(user.id, manager);
+    const retValue = await this.songsService.create(
+      createSongDto,
+      user,
+      manager,
+    );
     return retValue;
   }
 
@@ -52,10 +76,17 @@ export class SongsController {
   }
 
   @Get('/search/artist')
-  async findTrack(@Req() req: any) {
-    this.spotifyClient.setAccessToken(
-      'BQDKUPCSGDLJPTfS0iO2Mc4ggoLF0VoDic0q6J9OvQP6Qh4L7_5GKmVcEyUTrZHDMUSiqxf5V_sXijgcn3juHzr-FhWnUhnLvEIeqzIApng0dy4rmV3egTvgtihn5_H-tZgEb_gqmRkY14OidzEBhW9FGtjlQawbM2tiaCQhwVeqr-svvkE5',
-    );
+  @UseGuards(JwtAuthGuard)
+  @Bind(Req())
+  @Transaction()
+  async findTrack(
+    @Req() req: any,
+    @TransactionManager() manager: EntityManager,
+  ) {
+    const user = <User>req.user;
+    console.log(user);
+    const userRecord = await this.usersService.refreshToken(user.id, manager);
+    this.spotifyClient.setAccessToken(userRecord.accessToken);
     const response = await this.spotifyClient.searchTracks(req.query.artist);
     const tracks = response.body.tracks.items.map((item) => {
       const artists = item.artists.map((artist) => artist.name);
